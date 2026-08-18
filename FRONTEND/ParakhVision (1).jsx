@@ -188,7 +188,12 @@ export default function ParakhVision() {
   };
 
   const scrollToAnalyze = () => {
-    document.getElementById("analyze")?.scrollIntoView({ behavior: "smooth" });
+    document.getElementById("analyze")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const scrollToId = (id) => (e) => {
+    e.preventDefault();
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
@@ -201,9 +206,9 @@ export default function ParakhVision() {
           <span style={styles.mark}>PV</span> ParakhVision
         </div>
         <div style={styles.navLinks} className="pv-nav-links">
-          <a href="#home" style={styles.navLink}>Home</a>
-          <a href="#analyze" style={styles.navLink}>Inspect</a>
-          <a href="#how" style={styles.navLink}>How It Works</a>
+          <a href="#home" style={styles.navLink} onClick={scrollToId("home")}>Home</a>
+          <a href="#analyze" style={styles.navLink} onClick={scrollToId("analyze")}>Inspect</a>
+          <a href="#how" style={styles.navLink} onClick={scrollToId("how")}>Workflow</a>
         </div>
         <button style={styles.navBtn} onClick={scrollToAnalyze}>Try It</button>
       </nav>
@@ -211,34 +216,21 @@ export default function ParakhVision() {
       {/* HERO */}
       <section id="home" style={styles.hero}>
         <div style={styles.heroContent}>
+          <HeroGraphic />
           <div style={styles.heroActions}>
             <button style={styles.btnPrimary} onClick={scrollToAnalyze}>
               Start Inspection →
             </button>
-            <a style={styles.btnGhost} href="#how">
-              See the Process ↓
+            <a style={styles.btnGhost} href="#how" onClick={scrollToId("how")}>
+              How It Works ↓
             </a>
           </div>
         </div>
-        <div style={styles.heroVisual}>
-          <div style={{ ...styles.floatingChip, top: "6%", left: "-4%" }}>
-            <b style={styles.chipB}>94.7%</b>
-            <small style={styles.chipSmall}>Model confidence</small>
-          </div>
-          <div style={{ ...styles.floatingChip, bottom: "10%", right: "-6%" }}>
-            <b style={styles.chipB}>Real-time</b>
-            <small style={styles.chipSmall}>Per-frame analysis</small>
-          </div>
-          <div style={styles.heroTag}>
-            <div style={styles.tagEyebrow}>Inspection Report</div>
-            <h4 style={styles.tagH4}>PART ID — PN-4821-A</h4>
-            <div style={styles.tagRow}><span>Inspector</span><span>AI-VISION-05</span></div>
-            <div style={styles.tagRow}><span>Defect type</span><span>None detected</span></div>
-            <div style={{ ...styles.tagRow, borderBottom: "none" }}>
-              <span>Confidence</span><span>96.4%</span>
-            </div>
-            <div style={styles.stampMini}>PASS</div>
-          </div>
+        <div style={styles.heroWorkflow} id="how" className="pv-hero-workflow">
+          <WfStep n="01" stage="capture" title="Capture" text="A camera image of the part enters the pipeline, uploaded or pulled from the line." delay="0.15s" />
+          <WfStep n="02" stage="preprocess" title="Preprocess" text="The frame is normalized and cropped so the model sees the part consistently." delay="0.4s" />
+          <WfStep n="03" stage="detect" title="Detect" text="The vision model scans for cracks, scratches, missing parts, and misalignment." delay="0.65s" />
+          <WfStep n="04" stage="report" title="Report" text="A pass/fail result is stamped with defect type, location, and confidence." delay="0.9s" last />
         </div>
       </section>
 
@@ -419,27 +411,8 @@ export default function ParakhVision() {
         </div>
       </section>
 
-      <Conveyor stroke="#ddd6c5" bg="var(--light-bg)" />
-
-      {/* HOW IT WORKS */}
-      <section id="how" style={{ ...styles.section, background: "var(--dark-bg)", color: "var(--dark-text)" }}>
-        <div style={styles.sectionHeading}>
-          <div style={{ ...styles.eyebrow, color: "var(--amber)" }}>Workflow</div>
-          <h2 style={styles.h2}>Four stations, one pass down the line</h2>
-          <p style={{ ...styles.sectionP, color: "var(--dark-dim)" }}>
-            Every part moves through the same sequence, in order — the way it would on a real conveyor.
-          </p>
-        </div>
-        <div style={styles.steps} className="pv-steps">
-          <Step n="01" title="Capture" text="A camera image of the part enters the pipeline, uploaded or pulled from the line." />
-          <Step n="02" title="Preprocess" text="The frame is normalized and cropped so the model sees the part consistently." />
-          <Step n="03" title="Detect" text="The vision model scans for cracks, scratches, missing parts, and misalignment." />
-          <Step n="04" title="Report" text="A pass/fail result is stamped with defect type, location, and confidence." />
-        </div>
-      </section>
-
       <footer style={styles.footer}>
-        <span>Detection runs on-device · results are session-local</span>
+        <div style={styles.footerBrand}>ParakhVision — AI-powered visual inspection for manufacturing lines</div>
       </footer>
     </div>
   );
@@ -454,13 +427,149 @@ function FieldRow({ k, v, last }) {
   );
 }
 
-function Step({ n, title, text }) {
+function HeroGraphic() {
   return (
-    <div style={styles.step}>
-      <span style={styles.stepN}>{n}</span>
-      <h3 style={styles.stepH3}>{title}</h3>
-      <p style={styles.stepP}>{text}</p>
+    <svg
+      width="100%"
+      height="auto"
+      viewBox="0 0 480 300"
+      style={styles.heroGraphic}
+      role="img"
+      aria-label="Illustration of an AI camera scanning a manufactured part for defects"
+    >
+      <defs>
+        <radialGradient id="hgGlow" cx="50%" cy="42%" r="60%">
+          <stop offset="0%" stopColor="rgba(232,163,61,0.16)" />
+          <stop offset="100%" stopColor="rgba(232,163,61,0)" />
+        </radialGradient>
+      </defs>
+
+      <rect x="0" y="0" width="480" height="300" fill="url(#hgGlow)" />
+
+      {/* frame / panel */}
+      <rect x="30" y="24" width="420" height="252" rx="8" fill="var(--dark-bg-2)" stroke="var(--dark-line)" strokeWidth="1.4" />
+
+      {/* camera unit */}
+      <g>
+        <rect x="205" y="46" width="70" height="34" rx="5" fill="var(--dark-bg)" stroke="var(--amber)" strokeWidth="1.6" />
+        <circle cx="240" cy="63" r="10" fill="none" stroke="var(--amber)" strokeWidth="1.8" />
+        <circle cx="240" cy="63" r="3.4" fill="var(--amber)" className="pv-thumb-flash" />
+        <rect x="228" y="80" width="24" height="8" fill="var(--dark-bg)" stroke="var(--amber-deep)" strokeWidth="1.2" />
+      </g>
+
+      {/* scan beam */}
+      <path d="M215 88 L150 190 L330 190 Z" fill="rgba(232,163,61,0.07)" stroke="var(--amber-deep)" strokeWidth="1" strokeDasharray="4 4" />
+      <line x1="150" y1="120" x2="330" y2="120" stroke="var(--amber)" strokeWidth="1.6" className="pv-thumb-scanline" opacity="0.85" />
+
+      {/* inspected part */}
+      <g transform="translate(240 210)">
+        <rect x="-70" y="-34" width="140" height="68" rx="6" fill="var(--dark-bg)" stroke="var(--dark-line)" strokeWidth="1.4" />
+        <circle cx="-34" cy="0" r="14" fill="none" stroke="var(--dark-dim)" strokeWidth="1.6" />
+        <rect x="-4" y="-16" width="60" height="10" fill="none" stroke="var(--dark-dim)" strokeWidth="1.4" />
+        <rect x="-4" y="4" width="60" height="10" fill="none" stroke="var(--dark-dim)" strokeWidth="1.4" />
+
+        {/* defect bounding box drawn on the part */}
+        <rect x="14" y="-24" width="34" height="22" fill="none" stroke="var(--fail)" strokeWidth="1.6" strokeDasharray="112" className="pv-thumb-box-in" />
+      </g>
+
+      {/* pass/fail readout chip */}
+      <g transform="translate(360 210)" className="pv-thumb-stamp-in" style={{ transformOrigin: "360px 210px" }}>
+        <rect x="-34" y="-16" width="68" height="32" rx="4" fill="none" stroke="var(--fail)" strokeWidth="2" />
+        <text x="0" y="5" textAnchor="middle" fontFamily={FONT_MONO} fontSize="13" fontWeight="700" fill="var(--fail)">
+          FAIL
+        </text>
+      </g>
+
+      {/* connecting circuit dots */}
+      <circle cx="100" cy="60" r="2.4" fill="var(--amber-deep)" />
+      <circle cx="100" cy="60" r="2.4" fill="var(--amber-deep)">
+        <animate attributeName="opacity" values="0.25;1;0.25" dur="2.4s" repeatCount="indefinite" />
+      </circle>
+      <circle cx="380" cy="90" r="2.4" fill="var(--amber-deep)">
+        <animate attributeName="opacity" values="1;0.25;1" dur="2.1s" repeatCount="indefinite" />
+      </circle>
+      <path d="M60 60 H100 M380 90 H420" stroke="var(--dark-line)" strokeWidth="1" />
+    </svg>
+  );
+}
+
+function WfStep({ n, title, text, delay, last, stage }) {
+  return (
+    <div className="pv-wf-step" style={{ ...styles.wfStep, animationDelay: delay }}>
+      <div style={styles.wfMarker}>
+        <span style={styles.wfDot}>{n}</span>
+        {!last && <span style={styles.wfConnector} />}
+      </div>
+      <div style={{ ...styles.wfBodyRow, paddingBottom: last ? 0 : 30 }}>
+        <WfThumb stage={stage} />
+        <div>
+          <h4 style={styles.wfH4}>{title}</h4>
+          <p style={styles.wfP}>{text}</p>
+        </div>
+      </div>
     </div>
+  );
+}
+
+function WfThumb({ stage }) {
+  return (
+    <svg width="56" height="56" viewBox="0 0 56 56" style={styles.wfThumb}>
+      <rect x="6" y="6" width="44" height="44" rx="4" fill="var(--dark-bg-2)" stroke="var(--dark-line)" strokeWidth="1.4" />
+
+      {stage === "capture" && (
+        <>
+          <path
+            d="M15 20h4l2-3h14l2 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H15a2 2 0 0 1-2-2V22a2 2 0 0 1 2-2z"
+            fill="none"
+            stroke="var(--amber)"
+            strokeWidth="1.5"
+          />
+          <circle cx="28" cy="30" r="6" fill="none" stroke="var(--amber)" strokeWidth="1.5" />
+          <circle cx="28" cy="30" r="2.2" fill="var(--amber)" className="pv-thumb-flash" />
+        </>
+      )}
+
+      {stage === "preprocess" && (
+        <>
+          <rect x="12" y="12" width="32" height="32" fill="none" stroke="var(--dark-dim)" strokeWidth="1" strokeDasharray="3 3" />
+          <rect
+            x="16"
+            y="16"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="var(--amber-deep)"
+            strokeWidth="1.6"
+            strokeDasharray="6 4"
+            className="pv-thumb-dash"
+          />
+          <path
+            d="M11 11h6M11 11v6M45 11h-6M45 11v6M11 45h6M11 45v-6M45 45h-6M45 45v-6"
+            stroke="var(--amber)"
+            strokeWidth="1.8"
+            fill="none"
+            strokeLinecap="round"
+          />
+        </>
+      )}
+
+      {stage === "detect" && (
+        <>
+          <rect x="17" y="19" width="22" height="17" fill="none" stroke="var(--fail)" strokeWidth="1.6" strokeDasharray="120" className="pv-thumb-box-in" />
+          <clipPath id="wfThumbClip">
+            <rect x="9" y="9" width="38" height="38" rx="2" />
+          </clipPath>
+          <line x1="9" y1="9" x2="47" y2="9" stroke="var(--amber)" strokeWidth="1.8" className="pv-thumb-scanline" clipPath="url(#wfThumbClip)" />
+        </>
+      )}
+
+      {stage === "report" && (
+        <g className="pv-thumb-stamp-in" style={{ transformOrigin: "28px 28px" }}>
+          <rect x="14" y="21" width="28" height="15" rx="2" fill="none" stroke="var(--pass)" strokeWidth="2" />
+          <path d="M19 28.5l4.5 4.5 10-10" fill="none" stroke="var(--pass)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+        </g>
+      )}
+    </svg>
   );
 }
 
@@ -494,17 +603,26 @@ const fontImport = `
     --fail: #c24444;
   }
   @keyframes pv-scan { 0% { top: 0%; } 100% { top: 100%; } }
+  @keyframes pv-wf-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  .pv-wf-step { animation-name: pv-wf-in; animation-duration: 0.6s; animation-timing-function: ease; animation-fill-mode: forwards; }
+  @keyframes pv-thumb-flash { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+  .pv-thumb-flash { animation: pv-thumb-flash 1.8s ease-in-out infinite; }
+  @keyframes pv-thumb-dash { to { stroke-dashoffset: -20; } }
+  .pv-thumb-dash { animation: pv-thumb-dash 1.4s linear infinite; }
+  @keyframes pv-thumb-box-in { 0% { stroke-dashoffset: 120; opacity: 0; } 60% { opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 1; } }
+  .pv-thumb-box-in { animation: pv-thumb-box-in 2.2s ease-in-out infinite; }
+  @keyframes pv-thumb-scanline { 0% { transform: translateY(0); } 100% { transform: translateY(38px); } }
+  .pv-thumb-scanline { animation: pv-thumb-scanline 1.6s ease-in-out infinite alternate; }
+  @keyframes pv-thumb-stamp-in { 0%, 55% { transform: scale(0.5) rotate(-14deg); opacity: 0; } 75% { transform: scale(1.12) rotate(-6deg); opacity: 1; } 100% { transform: scale(1) rotate(-6deg); opacity: 1; } }
+  .pv-thumb-stamp-in { animation: pv-thumb-stamp-in 2.6s ease-in-out infinite; }
   @media (max-width: 900px) {
     .pv-workspace { grid-template-columns: 1fr !important; }
   }
   @media (max-width: 840px) {
     .pv-nav-links { display: none !important; }
   }
-  @media (max-width: 900px) {
-    .pv-steps { grid-template-columns: 1fr 1fr !important; }
-  }
-  @media (max-width: 520px) {
-    .pv-steps { grid-template-columns: 1fr !important; }
+  @media (prefers-reduced-motion: reduce) {
+    .pv-wf-step { animation: none !important; opacity: 1 !important; transform: none !important; }
   }
 `;
 
@@ -581,6 +699,7 @@ const styles = {
     color: "var(--dark-text)",
   },
   heroContent: {},
+  heroGraphic: { display: "block", width: "100%", maxWidth: 480, marginBottom: 28 },
   heroActions: { display: "flex", gap: 14, flexWrap: "wrap" },
   btnPrimary: {
     fontFamily: FONT_MONO,
@@ -604,58 +723,28 @@ const styles = {
     color: "var(--dark-text)",
     textDecoration: "none",
   },
-  heroVisual: { position: "relative", display: "flex", alignItems: "center", justifyContent: "center" },
-  heroTag: {
-    width: "100%",
-    maxWidth: 340,
-    background: "var(--light-panel)",
-    color: "var(--light-text)",
-    border: "1px solid var(--light-line)",
-    padding: 22,
-    position: "relative",
-    boxShadow: "0 30px 60px rgba(0,0,0,0.35)",
-    transform: "rotate(-2deg)",
-  },
-  tagEyebrow: {
-    fontFamily: FONT_MONO,
-    fontSize: 10,
-    color: "var(--light-dim)",
-    letterSpacing: "0.12em",
-    textTransform: "uppercase",
-  },
-  tagH4: { fontFamily: FONT_DISPLAY, fontSize: 16, margin: "4px 0 14px" },
-  tagRow: {
+  heroWorkflow: { display: "flex", flexDirection: "column" },
+  wfStep: { display: "flex", gap: 18, opacity: 0, transform: "translateY(16px)" },
+  wfMarker: { display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 },
+  wfDot: {
+    width: 38,
+    height: 38,
+    border: "2px solid var(--amber)",
+    background: "var(--dark-bg)",
     display: "flex",
-    justifyContent: "space-between",
+    alignItems: "center",
+    justifyContent: "center",
     fontFamily: FONT_MONO,
-    fontSize: 11.5,
-    padding: "7px 0",
-    borderBottom: "1px dashed var(--light-line)",
-  },
-  stampMini: {
-    marginTop: 16,
-    display: "inline-block",
-    fontFamily: FONT_DISPLAY,
     fontWeight: 700,
-    fontSize: 20,
-    color: "var(--pass)",
-    border: "3px solid var(--pass)",
-    padding: "6px 16px",
-    borderRadius: 5,
-    transform: "rotate(-6deg)",
+    fontSize: 12,
+    color: "var(--amber)",
   },
-  floatingChip: {
-    position: "absolute",
-    background: "var(--dark-bg-2)",
-    border: "1px solid var(--dark-line)",
-    padding: "10px 14px",
-    fontFamily: FONT_MONO,
-    fontSize: 11,
-    color: "var(--dark-text)",
-    boxShadow: "0 12px 30px rgba(0,0,0,0.4)",
-  },
-  chipB: { display: "block", color: "var(--amber)", fontSize: 13 },
-  chipSmall: { color: "var(--dark-dim)" },
+  wfConnector: { flex: 1, width: 1, minHeight: 26, background: "var(--dark-line)", marginTop: 4 },
+  wfBody: {},
+  wfBodyRow: { display: "flex", gap: 16, alignItems: "flex-start" },
+  wfThumb: { flexShrink: 0, marginTop: 2 },
+  wfH4: { fontFamily: FONT_DISPLAY, fontSize: 17, fontWeight: 600, marginBottom: 5 },
+  wfP: { color: "var(--dark-dim)", fontSize: 13.5, maxWidth: 340, margin: 0 },
   section: { padding: "90px 6%" },
   sectionHeading: { textAlign: "center", maxWidth: 640, margin: "0 auto 46px" },
   eyebrow: { fontFamily: FONT_MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase" },
@@ -845,11 +934,6 @@ const styles = {
     fontFamily: FONT_MONO,
     fontSize: 11.5,
   },
-  steps: { maxWidth: 1140, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16 },
-  step: { padding: 24, border: "1px solid var(--dark-line)", background: "var(--dark-bg-2)", position: "relative" },
-  stepN: { fontFamily: FONT_MONO, color: "var(--amber)", fontWeight: 700, fontSize: 13 },
-  stepH3: { fontFamily: FONT_DISPLAY, fontSize: 17, margin: "14px 0 6px", fontWeight: 600 },
-  stepP: { color: "var(--dark-dim)", fontSize: 13.5 },
   footer: {
     background: "var(--dark-bg)",
     color: "var(--dark-dim)",
@@ -858,5 +942,12 @@ const styles = {
     borderTop: "1px solid var(--dark-line)",
     fontFamily: FONT_MONO,
     fontSize: 11.5,
+  },
+  footerBrand: {
+    color: "var(--dark-text)",
+    fontWeight: 600,
+    fontSize: 12.5,
+    marginBottom: 8,
+    letterSpacing: "0.02em",
   },
 };
