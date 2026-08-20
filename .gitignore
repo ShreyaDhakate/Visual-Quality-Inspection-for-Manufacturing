@@ -93,3 +93,6 @@ Desktop.ini
 # ==========================================
 
 .DS_Store
+
+# Uploaded inspection images
+BACKEND/uploads/

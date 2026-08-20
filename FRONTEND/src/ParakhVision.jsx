@@ -1,5 +1,7 @@
 import React, { useRef, useState, useCallback } from "react";
 
+const API_URL = "http://127.0.0.1:5000";
+
 const DEFECT_TYPES = [
   {
     key: "scratch",
@@ -36,6 +38,9 @@ export default function ParakhVision() {
   const [hasImage, setHasImage] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [visualization, setVisualization] = useState(null);
+  const [analysis, setAnalysis] = useState(null);
 
   const [report, setReport] = useState({
     partId: "PART ID — PENDING",
@@ -74,23 +79,37 @@ export default function ParakhVision() {
 
   const loadImage = useCallback((file) => {
     if (!file || !file.type.startsWith("image/")) return;
+
+    setSelectedFile(file);
+    setVisualization(null);
+    setAnalysis(null);
+
     const reader = new FileReader();
+
     reader.onload = (e) => {
       const img = new Image();
+
       img.onload = () => {
         imageRef.current = img;
+
         const canvas = canvasRef.current;
         const maxW = 720;
         const scale = Math.min(1, maxW / img.width);
+
         canvas.width = img.width * scale;
         canvas.height = img.height * scale;
+
         const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
         setHasImage(true);
         resetReport(true);
       };
+
       img.src = e.target.result;
     };
+
     reader.readAsDataURL(file);
   }, [resetReport]);
 
@@ -112,76 +131,96 @@ export default function ParakhVision() {
     setLogs((prev) => [{ id, defect, time, result }, ...prev]);
   };
 
-  const runInspection = () => {
-    if (!imageRef.current) return;
+  const runInspection = async () => {
+    if (!selectedFile || scanning) return;
+
     setScanning(true);
     resetReport(true);
+    setVisualization(null);
+    setAnalysis(null);
 
-    setTimeout(() => {
-      setScanning(false);
-      redrawBase();
+    try {
+      const formData = new FormData();
+      formData.append("image", selectedFile);
 
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext("2d");
-      const isDefective = Math.random() < 0.6;
-      const id = makePartId();
-      const time = new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
+      const response = await fetch(`${API_URL}/api/inspect`, {
+        method: "POST",
+        body: formData,
       });
 
-      if (isDefective) {
-        const defect =
-          DEFECT_TYPES[Math.floor(Math.random() * DEFECT_TYPES.length)];
-        const confidence = (82 + Math.random() * 15).toFixed(1);
+      const data = await response.json();
 
-        const bw = canvas.width * (0.16 + Math.random() * 0.14);
-        const bh = canvas.height * (0.14 + Math.random() * 0.14);
-        const bx = Math.random() * (canvas.width - bw);
-        const by = Math.random() * (canvas.height - bh);
-
-        ctx.strokeStyle = "#c24444";
-        ctx.lineWidth = 2.5;
-        ctx.strokeRect(bx, by, bw, bh);
-        ctx.fillStyle = "rgba(194,68,68,0.14)";
-        ctx.fillRect(bx, by, bw, bh);
-        ctx.font = "600 11px monospace";
-        ctx.fillStyle = "#c24444";
-        ctx.fillText(
-          defect.label.toUpperCase(),
-          bx,
-          by > 14 ? by - 6 : by + bh + 14
-        );
-
-        setReport({
-          partId: "PART ID — " + id,
-          time,
-          defect: defect.label,
-          confidence: confidence + "%",
-          region: "x:" + Math.round(bx) + " y:" + Math.round(by),
-          result: "fail",
-        });
-        setDefectNote({ label: defect.label, note: defect.note });
-        addLogRow(id, defect.label, time, "fail");
-      } else {
-        const confidence = (91 + Math.random() * 8).toFixed(1);
-        setReport({
-          partId: "PART ID — " + id,
-          time,
-          defect: "None detected",
-          confidence: confidence + "%",
-          region: "Full frame",
-          result: "pass",
-        });
-        setDefectNote(null);
-        addLogRow(id, "None", time, "pass");
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Inspection failed.");
       }
-    }, 1400);
+
+      console.log("PatchCore response:", data);
+
+      const inspection = data.inspection;
+      const localization = data.localization;
+      const backendAnalysis = data.analysis;
+      const backendVisualization = data.visualization;
+
+      const id = "PV-" + Math.floor(1000 + Math.random() * 8999);
+      const time = new Date().toLocaleTimeString([], {
+        hour: "2-digit", minute: "2-digit", second: "2-digit",
+      });
+
+      const isDefective = Boolean(inspection.anomaly_detected);
+      const score = Number(inspection.anomaly_score || 0);
+      const confidence = Math.min(100, Math.max(0, score * 100)).toFixed(1);
+
+      let defectLabel = backendAnalysis?.defect_type;
+      if (!defectLabel) {
+        defectLabel = isDefective ? "Anomaly detected" : "None detected";
+      }
+
+      let region = "Full frame";
+      if (localization?.bounding_box) {
+        const box = localization.bounding_box;
+        region = `x:${box.x} y:${box.y} w:${box.width} h:${box.height}`;
+      }
+
+      setReport({
+        partId: "PART ID — " + id,
+        time,
+        defect: defectLabel,
+        confidence: confidence + "%",
+        region,
+        result: isDefective ? "fail" : "pass",
+      });
+
+      setAnalysis(backendAnalysis);
+      setVisualization(backendVisualization);
+
+      addLogRow(id, defectLabel, time, isDefective ? "fail" : "pass");
+    } catch (error) {
+      console.error("Inspection error:", error);
+
+      setReport({
+        partId: "INSPECTION ERROR",
+        time: new Date().toLocaleTimeString(),
+        defect: "Backend unavailable",
+        confidence: "—",
+        region: "—",
+        result: null,
+      });
+
+      setAnalysis({
+        reason: error.message || "Unable to connect to inspection service.",
+        potential_impact: "The product could not be evaluated.",
+        recommended_action: "Verify that the Flask backend is running.",
+      });
+    } finally {
+      setScanning(false);
+    }
   };
 
   const clearTray = () => {
     imageRef.current = null;
+    setSelectedFile(null);
+    setVisualization(null);
+    setAnalysis(null);
     setHasImage(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
     resetReport(false);
@@ -371,6 +410,31 @@ export default function ParakhVision() {
                 <div style={styles.defectNote}>
                   <b style={{ color: "var(--dark-text)" }}>{defectNote.label} detected.</b>{" "}
                   {defectNote.note}
+                </div>
+              )}
+
+              {visualization && (
+                <div style={styles.visualizationPanel}>
+                  <div style={styles.visualizationTitle}>AI Visualization</div>
+                  <img
+                    src={`${API_URL}${visualization.overlay}`}
+                    alt="AI anomaly detection overlay"
+                    style={styles.visualizationImage}
+                  />
+                  <div style={styles.visualizationLinks}>
+                    <a style={styles.visualizationLink} href={`${API_URL}${visualization.original}`} target="_blank" rel="noreferrer">Original</a>
+                    <a style={styles.visualizationLink} href={`${API_URL}${visualization.heatmap}`} target="_blank" rel="noreferrer">Heatmap</a>
+                    <a style={styles.visualizationLink} href={`${API_URL}${visualization.overlay}`} target="_blank" rel="noreferrer">Detection Overlay</a>
+                  </div>
+                </div>
+              )}
+
+              {analysis && (
+                <div style={styles.aiReasoning}>
+                  <div style={styles.visualizationTitle}>AI Assessment</div>
+                  <div style={styles.reasoningRow}><b>Why:</b><span>{analysis.reason}</span></div>
+                  <div style={styles.reasoningRow}><b>Potential Impact:</b><span>{analysis.potential_impact}</span></div>
+                  <div style={styles.reasoningRow}><b>Recommended Action:</b><span>{analysis.recommended_action}</span></div>
                 </div>
               )}
             </div>
@@ -905,6 +969,14 @@ const styles = {
     lineHeight: 1.55,
     color: "var(--dark-dim)",
   },
+  visualizationPanel: { margin: "0 22px 20px", padding: 14, background: "rgba(255,255,255,0.03)", border: "1px solid var(--dark-line)" },
+  visualizationTitle: { fontFamily: FONT_MONO, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--amber)", marginBottom: 12 },
+  visualizationImage: { display: "block", width: "100%", height: "auto", border: "1px solid var(--dark-line)" },
+  visualizationLinks: { display: "flex", gap: 12, marginTop: 10, flexWrap: "wrap" },
+  visualizationLink: { color: "var(--amber)", fontFamily: FONT_MONO, fontSize: 10.5, textDecoration: "none" },
+  aiReasoning: { margin: "0 22px 20px", padding: 14, background: "rgba(232,163,61,0.05)", borderLeft: "3px solid var(--amber-deep)" },
+  reasoningRow: { display: "flex", flexDirection: "column", gap: 3, marginBottom: 10, fontSize: 12, lineHeight: 1.5, color: "var(--dark-dim)" },
+
   logSection: { maxWidth: 1140, margin: "34px auto 0" },
   logHead: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
   logH3: { fontFamily: FONT_DISPLAY, fontSize: 14, fontWeight: 600 },
